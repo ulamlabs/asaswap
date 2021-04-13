@@ -40,5 +40,24 @@ const { assert } = chai;
       assert(curK >= K, `CFMM must preserve A * B >= K (K cannot decrease). Initially K was ${K}, currently is ${curK}`);
     });
 
+    it('large swap preserves constant function', () => {
+      this.asaswap.setupApplicationWithEscrow(this.master);
+      this.asaswap.optIn(this.master.address);
+      this.asaswap.optIn(this.swapper.address);
+      let A = 176590594953881n, B = 277620723682493n; // 48 bit primes
+      this.asaswap.addLiquidity(this.master, this.asaswap.getEscrowAddress(), A, B);
+      let K = this.getExchangeConstant();
+
+      this.asaswap.secondaryAssetSwap(this.swapper, this.asaswap.getEscrowAddress(), 983920151771n);
+      this.asaswap.withdraw(this.swapper, this.getLocalNumber(this.swapper.address, USR_A_BAL), this.getLocalNumber(this.swapper.address, USR_B_BAL));
+      let curK = this.getExchangeConstant();
+      assert(curK >= K, `CFMM must preserve A * B >= K (K cannot decrease). Initially K was ${K}, currently is ${curK}`);
+
+      this.asaswap.primaryAssetSwap(this.swapper, this.asaswap.getEscrowAddress(), B - A);
+      this.asaswap.withdraw(this.swapper, this.getLocalNumber(this.swapper.address, USR_A_BAL), this.getLocalNumber(this.swapper.address, USR_B_BAL));
+      curK = this.getExchangeConstant();
+      assert(curK >= K, `CFMM must preserve A * B >= K (K cannot decrease). Initially K was ${K}, currently is ${curK}`);
+    });
+
   });
 });
