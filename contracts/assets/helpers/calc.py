@@ -96,4 +96,4 @@ class mulw_divw4(Expr):
 
 
 def mulw_divw(m1, m2, d):
-    return mulw_divw4(m1, m2, d, 30)
+    return mulw_divw4(m1, m2, d, 29)

@@ -5,7 +5,7 @@ export const USR_A_BAL = '1';
 export const USR_B_BAL = '2';
 export const USR_LIQ_TOKENS = '3';
 
-export const SWAP = 'S';
+export const SWAP = '1';
 export const WITHDRAW = 'W';
 export const WITHDRAW_LIQUIDITY = 'X';
 export const DEPOSIT_LIQUIDITY = 'Y';
