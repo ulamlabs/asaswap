@@ -108,6 +108,12 @@
                 {{ feeDisplay }}
               </div>
             </div>
+            <div class="flex sm:flex-row flex-col mt-2 sm:mt-0">
+              <div>Minimum received:</div>
+              <div class="sm:text-right flex-grow font-bold">
+                {{ minimumReceivedDisplay }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -235,7 +241,7 @@ export default {
     },
     priceImpactDisplay() {
       if (!isFinite(this.priceImpact) || !this.firstAmount || !this.secondAmount) {
-        return 'N/A';
+        return '0 %';
       }
       return (this.priceImpact * 100).toFixed(2) + ' %';
     },
@@ -249,13 +255,22 @@ export default {
       }
     },
     feeDisplay() {
-      if (!this.fee) {
-        return 'N/A';
+      let value = 0;
+      if (this.fee) {
+        value = this.secondAsset.getAssetDisplayAmount(this.fee);
       }
-      const value = this.secondAsset.getAssetDisplayAmount(this.fee, this.currentPair.ratioDecimalPoints);
       return `${value} ${this.secondAsset.assetName.toUpperCase()}`;
     },
-
+    minimumReceived() {
+      return this.exchangeCalculator.minimumReceived(
+        this.secondAsset.getRawAssetAmount(this.secondAmount)
+      );
+    },
+    minimumReceivedDisplay() {
+      let minRcv = this.secondAsset.getAssetDisplayAmount(this.minimumReceived);
+      let symbol = this.secondAsset.assetName;
+      return `${minRcv} ${symbol}`;
+    }
   },
   watch: {
     currentPair() {
@@ -381,7 +396,8 @@ export default {
       return !error;
     },
     async onSwap() {
-      if (this.currentPair.reversed) {
+      console.log(this.currentPair.reversedKey);
+      if (this.currentPair.reversedKey) {
         await this.$store.dispatch('algorand/QUEUE_ASSET_OPT_IN', {
           assetIds: [this.primaryAsset.assetIndex]
         });
@@ -390,7 +406,8 @@ export default {
           actionMethod: async () =>
             await this.rawStore.serviceInstance.swapSecondary(
               this.account,
-              amount
+              amount,
+              this.minimumReceived
             ),
           actionMessage: 'Swapping...',
           actionVerificationMethod: ({ prevState, newState }) => {
@@ -412,7 +429,8 @@ export default {
           actionMethod: async () =>
             await this.rawStore.serviceInstance.swapPrimary(
               this.account,
-              amount
+              amount,
+              this.minimumReceived
             ),
           actionMessage: 'Swapping...',
           actionVerificationMethod: ({ prevState, newState }) => {

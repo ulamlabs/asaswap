@@ -12,8 +12,17 @@ import {
   REMOVE_LIQUIDITY,
   SWAP,
   WITHDRAW,
-  WITHDRAW_LIQUIDITY
+  WITHDRAW_LIQUIDITY,
+  CALC_ADD_LIQ,
+  CALC_ADD_LIQ_B,
+  CALC_SWAP_A,
+  CALC_SWAP_B,
+  CALC_REM_LIQ_A,
+  CALC_REM_LIQ_B,
+  CALC_SLOT_1,
+  CALC_SLOT_2
 } from '@/utils/constants';
+import {  } from '../utils/constants';
 
 export default class AlgorandService {
   constructor(signer, ledger, assetPair) {
@@ -85,27 +94,81 @@ export default class AlgorandService {
 
   async addLiquidity(accountAddress, primaryAssetAmount, secondaryAssetAmount) {
     const suggestedParams = await this.getSuggestedParams();
-    const tx1 = this.txMaker.makeCallTx(accountAddress, [ADD_LIQUIDITY], suggestedParams);
-    const tx2 = this.txMaker.makeSecondaryAssetDepositTx(accountAddress, secondaryAssetAmount, suggestedParams);
-    const tx3 = this.txMaker.makePrimaryAssetDepositTx(accountAddress, primaryAssetAmount, suggestedParams);
-    await validateTx([tx1, tx2, tx3]);
+    const tx1 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_ADD_LIQ, CALC_SLOT_1], suggestedParams);
+    const tx2 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_ADD_LIQ_B, CALC_SLOT_2], suggestedParams);
+    const tx3 = this.txMaker.makeCallTx(accountAddress, [ADD_LIQUIDITY], suggestedParams);
+    const tx4 = this.txMaker.makePrimaryAssetDepositTx(accountAddress, primaryAssetAmount, suggestedParams);
+    const tx5 = this.txMaker.makeSecondaryAssetDepositTx(accountAddress, secondaryAssetAmount, suggestedParams);
+    await validateTx([tx1, tx2, tx3, tx4, tx5]);
     const txnGroup = await algosdk.assignGroupID([
       {
         ...tx1,
+        appArgs: encodeArrayForSDK([CALC_ADD_LIQ, CALC_SLOT_1])
+      },
+      {
+        ...tx2,
+        appArgs: encodeArrayForSDK([CALC_ADD_LIQ_B, CALC_SLOT_2])
+      },
+      {
+        ...tx3,
         appArgs: encodeArrayForSDK([ADD_LIQUIDITY])
       },
-      Object.assign({}, tx2),
-      Object.assign({}, tx3)
+      Object.assign({}, tx4),
+      Object.assign({}, tx5)
     ]);
     tx1.group = txnGroup[0].group.toString('base64');
     tx2.group = txnGroup[1].group.toString('base64');
     tx3.group = txnGroup[2].group.toString('base64');
+    tx4.group = txnGroup[3].group.toString('base64');
+    tx5.group = txnGroup[4].group.toString('base64');
+    eventBus.$emit('set-action-message', 'Signing 1 of 5 liquidity transactions...');
+    const signedTx1 = await this.signer.sign(tx1);
+    eventBus.$emit('set-action-message', 'Signing 2 of 5 liquidity transactions...');
+    const signedTx2 = await this.signer.sign(tx2);
+    eventBus.$emit('set-action-message', 'Signing 3 of 5 liquidity transactions...');
+    const signedTx3 = await this.signer.sign(tx3);
+    eventBus.$emit('set-action-message', 'Signing 4 of 5 liquidity transactions...');
+    const signedTx4 = await this.signer.sign(tx4);
+    eventBus.$emit('set-action-message', 'Signing 5 of 5 liquidity transactions...');
+    const signedTx5 = await this.signer.sign(tx5);
+    eventBus.$emit('set-action-message', 'Sending liquidity transactions...');
+    return await this.signer.send({
+      ledger: this.ledger,
+      tx: this.txMaker.combineSignedTxs([signedTx1, signedTx2, signedTx3, signedTx4, signedTx5])
+    }, false);
+  }
+
+  async removeLiquidity(accountAddress, liquidityTokens) {
+    const suggestedParams = await this.getSuggestedParams();
+    const tx1 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_REM_LIQ_A, CALC_SLOT_1], suggestedParams);
+    const tx2 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_REM_LIQ_B, CALC_SLOT_2], suggestedParams);
+    const tx3 = this.txMaker.makeCallTx(accountAddress, [REMOVE_LIQUIDITY, Number(liquidityTokens)], suggestedParams);
+    await validateTx([tx1, tx2, tx3]);
+    const txnGroup = await algosdk.assignGroupID([
+      {
+        ...tx1,
+        appArgs: encodeArrayForSDK([CALC_REM_LIQ_A, CALC_SLOT_1])
+      },
+      {
+        ...tx2,
+        appArgs: encodeArrayForSDK([CALC_REM_LIQ_B, CALC_SLOT_2])
+      },
+      {
+        ...tx3,
+        appArgs: encodeArrayForSDK([REMOVE_LIQUIDITY, Number(liquidityTokens)])
+      }
+    ]);
+    tx1.group = txnGroup[0].group.toString('base64');
+    tx2.group = txnGroup[1].group.toString('base64');
+    tx3.group = txnGroup[2].group.toString('base64');
+
     eventBus.$emit('set-action-message', 'Signing 1 of 3 liquidity transactions...');
     const signedTx1 = await this.signer.sign(tx1);
     eventBus.$emit('set-action-message', 'Signing 2 of 3 liquidity transactions...');
     const signedTx2 = await this.signer.sign(tx2);
     eventBus.$emit('set-action-message', 'Signing 3 of 3 liquidity transactions...');
     const signedTx3 = await this.signer.sign(tx3);
+
     eventBus.$emit('set-action-message', 'Sending liquidity transactions...');
     return await this.signer.send({
       ledger: this.ledger,
@@ -113,66 +176,69 @@ export default class AlgorandService {
     }, false);
   }
 
-  async removeLiquidity(accountAddress, liquidityTokens) {
+  async swapSecondary(accountAddress, assetAmount, minRequested) {
     const suggestedParams = await this.getSuggestedParams();
-    const tx = this.txMaker.makeCallTx(accountAddress, [REMOVE_LIQUIDITY, Number(liquidityTokens)], suggestedParams);
-    await validateTx([tx]);
-    eventBus.$emit('set-action-message', 'Signing liquidity transaction...');
-    const signedTx = await this.signer.sign(tx);
-    eventBus.$emit('set-action-message', 'Sending liquidity transaction...');
-    return await this.signer.send({
-      ledger: this.ledger,
-      tx: signedTx.blob
-    }, false);
-  }
-
-  async swapSecondary(accountAddress, assetAmount) {
-    const suggestedParams = await this.getSuggestedParams();
-    const tx1 = this.txMaker.makeCallTx(accountAddress, [SWAP], suggestedParams);
-    const tx2 = this.txMaker.makeSecondaryAssetDepositTx(accountAddress, assetAmount, suggestedParams);
-    await validateTx([tx1, tx2]);
+    const tx1 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_SWAP_B, CALC_SLOT_1], suggestedParams);
+    const tx2 = this.txMaker.makeCallTx(accountAddress, [SWAP, minRequested], suggestedParams);
+    const tx3 = this.txMaker.makeSecondaryAssetDepositTx(accountAddress, assetAmount, suggestedParams);
+    await validateTx([tx1, tx2, tx3]);
     const txnGroup = await algosdk.assignGroupID([
       {
         ...tx1,
-        appArgs: encodeArrayForSDK([SWAP])
+        appArgs: encodeArrayForSDK([CALC_SWAP_B, CALC_SLOT_1])
       },
-      Object.assign({}, tx2),
+      {
+        ...tx2,
+        appArgs: encodeArrayForSDK([SWAP, minRequested])
+      },
+      Object.assign({}, tx3)
     ]);
     tx1.group = txnGroup[0].group.toString('base64');
     tx2.group = txnGroup[1].group.toString('base64');
-    eventBus.$emit('set-action-message', 'Signing 1 of 2 swap transactions...');
+    tx3.group = txnGroup[2].group.toString('base64');
+    eventBus.$emit('set-action-message', 'Signing 1 of 3 swap transactions...');
     const signedTx1 = await this.signer.sign(tx1);
-    eventBus.$emit('set-action-message', 'Signing 2 of 2 swap transactions...');
+    eventBus.$emit('set-action-message', 'Signing 2 of 3 swap transactions...');
     const signedTx2 = await this.signer.sign(tx2);
+    eventBus.$emit('set-action-message', 'Signing 3 of 3 swap transactions...');
+    const signedTx3 = await this.signer.sign(tx3);
     eventBus.$emit('set-action-message', 'Sending swap transactions...');
     return await this.signer.send({
       ledger: this.ledger,
-      tx: this.txMaker.combineSignedTxs([signedTx1, signedTx2])
+      tx: this.txMaker.combineSignedTxs([signedTx1, signedTx2, signedTx3])
     }, false);
   }
 
-  async swapPrimary(accountAddress, assetAmount) {
+  async swapPrimary(accountAddress, assetAmount, minRequested) {
     const suggestedParams = await this.getSuggestedParams();
-    const tx1 = this.txMaker.makeCallTx(accountAddress, [SWAP], suggestedParams);
-    const tx2 = this.txMaker.makePrimaryAssetDepositTx(accountAddress, assetAmount, suggestedParams);
-    await validateTx([tx1, tx2]);
+    const tx1 = this.txMaker.makeMuldivCallTx(accountAddress, [CALC_SWAP_A, CALC_SLOT_1], suggestedParams);
+    const tx2 = this.txMaker.makeCallTx(accountAddress, [SWAP, minRequested], suggestedParams);
+    const tx3 = this.txMaker.makePrimaryAssetDepositTx(accountAddress, assetAmount, suggestedParams);
+    await validateTx([tx1, tx2, tx3]);
     const txnGroup = await algosdk.assignGroupID([
       {
         ...tx1,
-        appArgs: encodeArrayForSDK([SWAP])
+        appArgs: encodeArrayForSDK([CALC_SWAP_A, CALC_SLOT_1])
       },
-      Object.assign({}, tx2),
+      {
+        ...tx2,
+        appArgs: encodeArrayForSDK([SWAP, minRequested])
+      },
+      Object.assign({}, tx3)
     ]);
     tx1.group = txnGroup[0].group.toString('base64');
     tx2.group = txnGroup[1].group.toString('base64');
-    eventBus.$emit('set-action-message', 'Signing 1 of 2 swap transactions...');
+    tx3.group = txnGroup[2].group.toString('base64');
+    eventBus.$emit('set-action-message', 'Signing 1 of 3 swap transactions...');
     const signedTx1 = await this.signer.sign(tx1);
-    eventBus.$emit('set-action-message', 'Signing 2 of 2 swap transactions...');
+    eventBus.$emit('set-action-message', 'Signing 2 of 3 swap transactions...');
     const signedTx2 = await this.signer.sign(tx2);
+    eventBus.$emit('set-action-message', 'Signing 3 of 3 swap transactions...');
+    const signedTx3 = await this.signer.sign(tx3);
     eventBus.$emit('set-action-message', 'Sending swap transactions...');
     return await this.signer.send({
       ledger: this.ledger,
-      tx: this.txMaker.combineSignedTxs([signedTx1, signedTx2])
+      tx: this.txMaker.combineSignedTxs([signedTx1, signedTx2, signedTx3])
     }, false);
   }
 

@@ -46,6 +46,7 @@ export class AssetPair {
     this.ratioDecimalPoints = params['ratioDecimalPoints'];
     this.ratio = 10 ** params['ratioDecimalPoints'];
     this.applicationId = params['applicationId'];
+    this.muldivAppId = params['muldivAppId'];
     this.escrowAddress = params['escrowAddress'];
     this.compiledEscrow = params['compiledEscrow'];
     this.feePercentage = params['feePercentage'];

@@ -99,8 +99,10 @@ export default {
       let address;
       if (ALGORAND_LEDGER === 'TestNet') {
         address = 'https://testnet.algoexplorer.io/tx/';
+      } else if (ALGORAND_LEDGER === 'BetaNet') {
+        address = 'https://betanet.algoexplorer.io/tx/';
       } else {
-        address = 'https://testnet.algoexplorer.io/tx/';
+        address = 'https://algoexplorer.io/tx/';
       }
       eventBus.$emit('open-alert', {
         type: 'success',

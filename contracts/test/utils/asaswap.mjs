@@ -113,7 +113,7 @@ class AlgosAsaManager {
       localInts: 3,
       localBytes: 0,
       globalInts: 5,
-      globalBytes: 2
+      globalBytes: 1
     };
     this.escrow = null;
     this.applicationId = null;
@@ -511,7 +511,7 @@ class AsaToAsaManager extends AlgosAsaManager {
       localInts: 3,
       localBytes: 0,
       globalInts: 6,
-      globalBytes: 2
+      globalBytes: 1
     };
     this.primaryAssetId = assets['primaryAssetId'];
     this.creationArgs = [

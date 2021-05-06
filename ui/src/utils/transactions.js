@@ -5,6 +5,11 @@ import { ALGOS_TO_ASA } from '@/utils/assetPairs';
 export function encodeArrayForSDK(decodedArray) {
   const encoder = new TextEncoder('ascii');
   return decodedArray.map((value) => {
+    if(typeof(value) === 'number') {
+      // uint64ToBigEndian doesn't quite return the Uint8Array and needs to be converted
+      // That array has proto: UInt8Array, while needed is TypedArray
+      return new Uint8Array(uint64ToBigEndian(value));
+    }
     return encoder.encode(value);
   });
 }
@@ -59,6 +64,23 @@ export class TransactionMaker {
       genesisHash: suggestedParams['genesis-hash'],
       flatFee: true,
       appIndex: this.assetPair.applicationId,
+      appForeignApps: [this.assetPair.muldivAppId],
+      appArgs: encodeArrayForSigner(appArgs)
+    };
+  }
+
+  makeMuldivCallTx(accountAddress, appArgs, suggestedParams) {
+    return {
+      from: accountAddress,
+      type: 'appl',
+      fee: suggestedParams['min-fee'],
+      firstRound: suggestedParams['last-round'],
+      lastRound: suggestedParams['last-round'] + 1000,
+      genesisID: suggestedParams['genesis-id'],
+      genesisHash: suggestedParams['genesis-hash'],
+      flatFee: true,
+      appIndex: this.assetPair.muldivAppId,
+      appForeignApps: [this.assetPair.applicationId],
       appArgs: encodeArrayForSigner(appArgs)
     };
   }

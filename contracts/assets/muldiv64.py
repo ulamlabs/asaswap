@@ -27,12 +27,12 @@ class MulDiv64:
         The results of the calculation are stored in the global state "1" or "2".
 
         The performed calculations are described below:
-        L: a/A * LT (calculate received amount of liquidity tokens when adding liquidity)
-        M: lt'/LT * B (calculate necessary amount of b token when adding liquidity, lt' comes from "L" calculation)
-        SA: B/(A+a) * a (calculate the amount of secondary token when swapping primary token)
-        SB: A/(B+b) * b (calculate the amount of primary token when swapping secondary token)
-        a: lt/LT * A (calculate the amount of primary token user should receive when removing liquidity)
-        b: lt/LT * B (calculate the amount of secondary token user should receive when removing liquidity)
+        X: a/A * LT (calculate received amount of liquidity tokens when adding liquidity)
+        Y: lt'/LT * B (calculate necessary amount of b token when adding liquidity, lt' comes from "L" calculation)
+        1: B/(A+a) * a (calculate the amount of secondary token when swapping primary token)
+        2: A/(B+b) * b (calculate the amount of primary token when swapping secondary token)
+        A: lt/LT * A (calculate the amount of primary token user should receive when removing liquidity)
+        B: lt/LT * B (calculate the amount of secondary token user should receive when removing liquidity)
 
         Variables are:
         a - amount of primary tokens deposited to escrow
@@ -66,12 +66,13 @@ class MulDiv64:
                 self.initialize_external_globals(),
                 # setup calculations based on the 0th argument
                 Cond(
-                    [operation_mode == Bytes("L"), self.setup_liquidity_calculation()], # may terminate execution
-                    [operation_mode == Bytes("M"), self.setup_required_b_calculation()], # may terminate execution
-                    [operation_mode == Bytes("a"), self.setup_liquidate_a_calculation()],
-                    [operation_mode == Bytes("b"), self.setup_liquidate_b_calculation()],
-                    [operation_mode == Bytes("SA"), self.setup_swap_a_calculation()],
-                    [operation_mode == Bytes("SB"), self.setup_swap_b_calculation()],
+                    [operation_mode == Bytes("X"), self.setup_liquidity_calculation()], # may terminate execution
+                    [operation_mode == Bytes("Y"), self.setup_required_b_calculation()], # may terminate execution
+                    [operation_mode == Bytes("A"), self.setup_liquidate_a_calculation()],
+                    [operation_mode == Bytes("B"), self.setup_liquidate_b_calculation()],
+                    [operation_mode == Bytes("1"), self.setup_swap_a_calculation()],
+                    [operation_mode == Bytes("2"), self.setup_swap_b_calculation()],
+                    [Int(1), Err()]
                 ),
                 # store the result in requested slot
                 App.globalPut(result_destination, self.calculate()),
@@ -90,9 +91,6 @@ class MulDiv64:
             self.total_liquidity_tokens,
             self.a_balance,
             self.b_balance,
-            Assert(self.total_liquidity_tokens.hasValue()),
-            Assert(self.a_balance.hasValue()),
-            Assert(self.b_balance.hasValue()),
         ])
 
     def calculate(self) -> Expr:

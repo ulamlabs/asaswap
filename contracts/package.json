@@ -5,6 +5,7 @@
   "license": "GPL-3.0",
   "dependencies": {
     "@algo-builder/algob": "^0.5.5",
+    "algosdk": "algorand/js-algorand-sdk.git#9a5824782511dff1f521c68fe54d562b3872d1ae",
     "chai": "^4.3.4",
     "mocha": "^8.2.1"
   },

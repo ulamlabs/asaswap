@@ -1,3 +1,9 @@
+// MAX_SLIPPAGE is the maximum allowed slippage allowed when executing a trade, this is applied after 
+// price impact is calculated.
+// This constant could be replaced by a more sophisticated algorithm that would, 
+// for example, take liquidity into account
+const MAX_SLIPPAGE = 0.005; // 0.5%
+
 export class ExchangeCalculator {
   constructor(globalPrimaryAssetAmount, globalSecondaryAssetAmount, assetPair) {
     this.globalPrimaryAssetAmount = globalPrimaryAssetAmount;
@@ -77,5 +83,13 @@ export class ExchangeCalculator {
       );
     }
     return value;
+  }
+
+  allowedSlippage() {
+    return MAX_SLIPPAGE;
+  }
+
+  minimumReceived(expectedAssetAmount) {
+    return Math.trunc(expectedAssetAmount * (1-MAX_SLIPPAGE));
   }
 }

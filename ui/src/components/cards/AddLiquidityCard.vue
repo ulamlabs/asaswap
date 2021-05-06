@@ -73,7 +73,7 @@
           </div>
         </div>
         <p class="px-4 py-4">
-          By adding liquidity you'll earn 0.3% of all trades on this pair
+          By adding liquidity you'll earn <strong>{{ currentPair.feePercentage }}%</strong> of all trades on this pair
           proportional to your share of the pool. Fees are added to the pool,
           accrued in real-time, and can be claimed by withdrawing your
           liquidity.
@@ -179,7 +179,7 @@ export default {
     },
     liquidityTokensDisplay() {
       if (!this.liquidityTokens) {
-        return 'N/A';
+        return 0;
       }
       return this.liquidityTokens;
     },
@@ -215,7 +215,7 @@ export default {
       return decodeURIComponent(pairName).toUpperCase().replace('-', '/');
     },
     onPrimaryInputChange(recalculate) {
-      if (this.globalState[GLOBAL_LIQ_TOKENS] === 0) {
+      if (!this.globalState[GLOBAL_LIQ_TOKENS]) {
         this.validate();
         return;
       }
@@ -239,7 +239,7 @@ export default {
       this.validate();
     },
     onSecondaryInputChange(recalculate) {
-      if (this.globalState[GLOBAL_LIQ_TOKENS] === 0) {
+      if (!this.globalState[GLOBAL_LIQ_TOKENS]) {
         this.validate();
         return;
       }
